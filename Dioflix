@@ -1,0 +1,63 @@
+import azure.functions as func
+import json
+import uuid
+from azure.cosmos import CosmosClient
+
+def salvar_cliente(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        url = "https://meucosmosdbfabiana.documents.azure.com:443/"
+        key = "xxxxxxxx" 
+        client = CosmosClient
+
+        database = client.get_database_client("meudb")
+        container = database.get_container_client("clientes")
+
+        data = req.get_json()
+        data["id"] = str(uuid.uuid4())  # gera um ID único
+
+        container.create_item(data)
+
+        return func.HttpResponse(
+            json.dumps({"mensagem": "Cliente salvo com sucesso!"}),
+            mimetype="application/json",
+            status_code=200
+        )
+
+    except Exception as e:
+        return func.HttpResponse(str(e), status_code=500)
+
+
+def listar_clientes(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        url = "https://meucosmosdbfabiana.documents.azure.com:443/" 
+        key = "xxxxxx" 
+        client = CosmosClient(url, credential=key)
+
+        database = client.get_database_client("meudb")
+        container = database.get_container_client("clientes")
+
+        items = list(container.read_all_items())
+
+        return func.HttpResponse(
+            json.dumps(items, indent=2),
+            mimetype="application/json",
+            status_code=200
+        )
+
+    except Exception as e:
+        return func.HttpResponse(str(e), status_code=500)
+
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    caminho = req.route_params.get('acao')
+
+    if caminho == 'salvar':
+        return salvar_cliente(req)
+    elif caminho == 'listar':
+        return listar_clientes(req)
+    else:
+        return func.HttpResponse(
+            json.dumps({"erro": "Use /api/clientes/salvar ou /api/clientes/listar"}),
+            mimetype="application/json",
+            status_code=400
+        )
